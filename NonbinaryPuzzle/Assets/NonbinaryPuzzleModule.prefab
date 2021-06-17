@@ -14,7 +14,7 @@ GameObject:
   - component: {fileID: 11496072}
   - component: {fileID: 11489182}
   m_Layer: 0
-  m_Name: BinaryPuzzleModule
+  m_Name: NonbinaryPuzzleModule
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -262,8 +262,8 @@ MonoBehaviour:
   m_Script: {fileID: -119419473, guid: 45b809be76fd7a3468b6f517bced6f28, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  ModuleType: BinaryPuzzleModule
-  ModuleDisplayName: Binary Puzzle
+  ModuleType: nonbinaryPuzzle
+  ModuleDisplayName: Nonbinary Puzzle
   RequiresTimerVisibility: 0
 --- !u!114 &11464240
 MonoBehaviour:
@@ -330,11 +330,11 @@ MonoBehaviour:
   - {fileID: 114125796790724578}
   - {fileID: 114568788179976896}
   materials:
-  - {fileID: 2100000, guid: b8f748fa02b88cb4b89a72ceb94854e3, type: 2}
   - {fileID: 2100000, guid: 47159da10ec2caf4fb61e0f84d4c3cc5, type: 2}
   - {fileID: 2100000, guid: d9d3e95e73f9adc4d8774ae53be988e5, type: 2}
   - {fileID: 2100000, guid: 977da87beb36e2d4b88e8287355e5953, type: 2}
   - {fileID: 2100000, guid: b20175b461537cf40a5c5d0ebf63db73, type: 2}
+  gray: {fileID: 2100000, guid: b8f748fa02b88cb4b89a72ceb94854e3, type: 2}
 --- !u!114 &11489324
 MonoBehaviour:
   m_ObjectHideFlags: 1
@@ -3872,7 +3872,7 @@ Transform:
   m_PrefabInternal: {fileID: 100100000}
   m_GameObject: {fileID: 1440192283662600}
   m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 0, y: 0.0801, z: -0.025}
+  m_LocalPosition: {x: 0, y: 0.0805, z: -0.025}
   m_LocalScale: {x: 0.03, y: 0.03, z: 0.03}
   m_Children: []
   m_Father: {fileID: 4800431016180500}
@@ -6242,7 +6242,7 @@ MeshRenderer:
   m_LightProbeUsage: 1
   m_ReflectionProbeUsage: 1
   m_Materials:
-  - {fileID: 2100000, guid: ed2df3201804da841819559a0784e405, type: 3}
+  - {fileID: 2100000, guid: 024f05871bc481a42af4e221ecd7ec2c, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0

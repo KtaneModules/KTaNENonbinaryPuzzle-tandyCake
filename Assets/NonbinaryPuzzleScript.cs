@@ -16,6 +16,7 @@ public class NonbinaryPuzzleScript : MonoBehaviour
     public KMSelectable[] buttons;
     public Material[] materials;
     public Material gray;
+    public TextMesh ypCounter, wkCounter;
 
     static int moduleIdCounter = 1;
     int moduleId;
@@ -155,7 +156,11 @@ public class NonbinaryPuzzleScript : MonoBehaviour
         foreach (var given in givens)
             displayedGrid[given] = solution[given];
         for (int i = 0; i < 36; i++)
+        {
             buttons[i].GetComponent<MeshRenderer>().sharedMaterial = displayedGrid[i] == null ? gray : materials[displayedGrid[i].Value];
+            DisplayCB(i);
+        }
+        SetDisplays();
     }
 
     void ButtonToggle(int pos)
@@ -173,6 +178,7 @@ public class NonbinaryPuzzleScript : MonoBehaviour
             displayedGrid[pos] = null;
 
         buttons[pos].GetComponent<MeshRenderer>().sharedMaterial = displayedGrid[pos] == null ? gray : materials[displayedGrid[pos].Value];
+        SetDisplays();
         DisplayCB(pos);
         if (Enumerable.Range(0, 36).All(ix => displayedGrid[ix] == solution[ix]))
         {
@@ -210,6 +216,11 @@ public class NonbinaryPuzzleScript : MonoBehaviour
             (cbON && displayedGrid[pos] != null) ?
             new string[] { "Y", string.Empty, "P", string.Empty }[(int)displayedGrid[pos]] :
             string.Empty;
+    }
+    void SetDisplays()
+    {
+        ypCounter.text = displayedGrid.Count(x => x % 2 == 0).ToString();
+        wkCounter.text = displayedGrid.Count(x => x % 2 == 1).ToString();
     }
 
     IEnumerator ResetFlip(float speed = 1.5f)

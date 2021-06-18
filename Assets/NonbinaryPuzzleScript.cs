@@ -223,7 +223,7 @@ public class NonbinaryPuzzleScript : MonoBehaviour
         wkCounter.text = displayedGrid.Count(x => x % 2 == 1).ToString();
     }
 
-    IEnumerator ResetFlip(float speed = 1.5f)
+    IEnumerator ResetFlip(float speed = 2.25f)
     {
         resetButton.AddInteractionPunch();
         Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, resetButton.transform);
@@ -231,7 +231,7 @@ public class NonbinaryPuzzleScript : MonoBehaviour
            DisplayGrid();
 
         whiteText = !whiteText;
-        float modifier = whiteText ? 1.5f : -1.5f;
+        float modifier = whiteText ? 1 : -1;
         Predicate<float> test;
         if (whiteText)
             test = (x => x <= 1);
@@ -249,12 +249,12 @@ public class NonbinaryPuzzleScript : MonoBehaviour
     }
 
 #pragma warning disable 414
-    private readonly string TwitchHelpMessage = "[!{0} A4 B3 F5] toggles those cells. [!{0} A4 Y B3 K] sets those cells to those colors. [!{0} row 4 YWPKYW] sets that row from left to right. [!{0} col D YWPKYW] sets that column from top to bottom. [!{0} solve YWPK...] to enter that whole grid. [!{0} reset] presses the reset button. [!{0} colorblind] toggles colorblind mode.";
+    private readonly string TwitchHelpMessage = "[!{0} A4 B3 F5] toggles those cells. [!{0} A4 Y B3 K] sets those cells to those colors. [!{0} row 4 YWPKYW] sets that row from left to right. [!{0} col D YWPKYW] sets that column from top to bottom. [!{0} solve YWPK...] to enter that whole grid. [!{0} clear A4 A5] sets those squares to gray (if applicable). [!{0} reset] presses the reset button. [!{0} colorblind] toggles colorblind mode.";
 #pragma warning restore 414
 
     IEnumerator ProcessTwitchCommand(string command)
     {
-        string[] coords = Enumerable.Range(0, 36).Select(x => "" + "ABCDEF"[x % 6] + "123456"[x / 6]).ToArray(); //This is dumb.
+        string[] coords = Enumerable.Range(0, 36).Select(x => "ABCDEF"[x % 6].ToString() + "123456"[x / 6]).ToArray(); //This is dumb.
         string[] letters = { "Y", "W", "P", "K" };
         command = command.Trim().ToUpperInvariant();
         List<string> parameters = command.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
@@ -307,7 +307,24 @@ public class NonbinaryPuzzleScript : MonoBehaviour
                 while (displayedGrid[i] != "YWPK".IndexOf(parameters.Last()[i]) && !givens.Contains(i))
                 {
                     buttons[i].OnInteract();
-                    yield return new WaitForSeconds(0.075f);
+                    yield return new WaitForSeconds(0.1f);
+                }
+            }
+        }
+        else if (parameters.First() == "CLEAR" || parameters.First() == "EMPTY")
+        {
+            parameters.RemoveAt(0);
+            if (parameters.All(x => coords.Contains(x)))
+            {
+                yield return null;
+                foreach (string coord in parameters)
+                {
+                    int ix = Array.IndexOf(coords, coord);
+                    while (displayedGrid[ix] != null && !givens.Contains(ix))
+                    {
+                        buttons[ix].OnInteract();
+                        yield return new WaitForSeconds(0.1f);
+                    }
                 }
             }
         }
@@ -329,7 +346,7 @@ public class NonbinaryPuzzleScript : MonoBehaviour
             while (displayedGrid[i] != solution[i])
             {
                 buttons[i].OnInteract();
-                yield return new WaitForSeconds(0.075f);
+                yield return new WaitForSeconds(0.1f);
             }
     }
 }

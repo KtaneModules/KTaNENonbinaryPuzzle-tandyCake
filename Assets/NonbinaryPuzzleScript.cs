@@ -4,18 +4,24 @@ using System.Collections.Generic;
 using System.Linq;
 using NonbinaryPuzzle;
 using UnityEngine;
+using System.Text.RegularExpressions;
 
 public class NonbinaryPuzzleScript : MonoBehaviour
 {
     public KMBombInfo Bomb;
     public KMAudio Audio;
+    public KMColorblindMode Colorblind;
 
     public KMSelectable resetButton;
     public KMSelectable[] buttons;
     public Material[] materials;
     public Material gray;
 
+    static int moduleIdCounter = 1;
+    int moduleId;
     private bool moduleSolved;
+    bool cbON;
+
     bool whiteText; //Controls reset button flipping
     float flipProgress;
     Coroutine isFlipping;
@@ -28,6 +34,7 @@ public class NonbinaryPuzzleScript : MonoBehaviour
 
     private void Awake()
     {
+        moduleId = moduleIdCounter++;
         foreach (KMSelectable button in buttons)
             button.OnInteract += delegate () { ButtonToggle(Array.IndexOf(buttons, button)); return false; };
         resetButton.OnInteract += delegate ()
@@ -35,6 +42,11 @@ public class NonbinaryPuzzleScript : MonoBehaviour
             if (isFlipping != null) StopCoroutine(isFlipping);
             isFlipping = StartCoroutine(ResetFlip());
             return false;
+        };
+        GetComponent<KMBombModule>().OnActivate += delegate ()
+        {
+            if (Colorblind.ColorblindModeActive)
+                ToggleCB();
         };
         if (UnityEngine.Random.Range(0, 2) == 0)
         {
@@ -57,11 +69,21 @@ public class NonbinaryPuzzleScript : MonoBehaviour
             return recurse(board).Take(2).Count() == 1;
         }).ToArray();
 
-        foreach (var given in givens)
-            displayedGrid[given] = solution[given];
         DisplayGrid();
+        DoLogging();
+    }
+    
+
+    void DoLogging()
+    {
+        Debug.LogFormat("[Nonbinary Puzzle #{0}] The displayed grid is as follows:", moduleId);
+        LogGrid(displayedGrid.Select(x => x ?? -1).ToArray(), 6, 6, ".YWPK", 1);
+        Debug.LogFormat("[Nonbinary Puzzle #{0}] ", moduleId);
+        Debug.LogFormat("[Nonbinary Puzzle #{0}] The solution is as follows:", moduleId);
+        LogGrid(solution, 6, 6, "YWPK", 0);
     }
 
+    //Puzzle generation code by Timwi.
     IEnumerable<int[]> recurse(int?[] board)
     {
         // Check if the whole board is done
@@ -129,6 +151,10 @@ public class NonbinaryPuzzleScript : MonoBehaviour
     void DisplayGrid()
     {
         for (int i = 0; i < 36; i++)
+            displayedGrid[i] = null;
+        foreach (var given in givens)
+            displayedGrid[given] = solution[given];
+        for (int i = 0; i < 36; i++)
             buttons[i].GetComponent<MeshRenderer>().sharedMaterial = displayedGrid[i] == null ? gray : materials[displayedGrid[i].Value];
     }
 
@@ -147,18 +173,51 @@ public class NonbinaryPuzzleScript : MonoBehaviour
             displayedGrid[pos] = null;
 
         buttons[pos].GetComponent<MeshRenderer>().sharedMaterial = displayedGrid[pos] == null ? gray : materials[displayedGrid[pos].Value];
+        DisplayCB(pos);
         if (Enumerable.Range(0, 36).All(ix => displayedGrid[ix] == solution[ix]))
         {
             moduleSolved = true;
             GetComponent<KMBombModule>().HandlePass();
+            if (cbON)
+                ToggleCB();
             resetButton.GetComponentInChildren<TextMesh>().text = "CORRECT!";
         }
     }
 
-    IEnumerator ResetFlip()
+    void LogGrid(int[] grid, int height, int length, string charSet, int shift = 0)
+    {
+        string logger = string.Empty;
+        for (int i = 0; i < height * length; i++)
+        {
+            logger += charSet[grid[i] + shift];
+            if (i % length == length - 1)
+            {
+                Debug.LogFormat("[Nonbinary Puzzle #{0}] {1}", moduleId, logger);
+                logger = string.Empty;
+            }
+        }
+    }
+
+    void ToggleCB()
+    {
+        cbON = !cbON;
+        for (int i = 0; i < 36; i++)
+            DisplayCB(i);
+    }
+    void DisplayCB(int pos)
+    {
+        buttons[pos].GetComponentInChildren<TextMesh>().text =
+            (cbON && displayedGrid[pos] != null) ?
+            new string[] { "Y", string.Empty, "P", string.Empty }[(int)displayedGrid[pos]] :
+            string.Empty;
+    }
+
+    IEnumerator ResetFlip(float speed = 1.5f)
     {
         resetButton.AddInteractionPunch();
         Audio.PlayGameSoundAtTransform(KMSoundOverride.SoundEffect.ButtonPress, resetButton.transform);
+        if (!moduleSolved)
+           DisplayGrid();
 
         whiteText = !whiteText;
         float modifier = whiteText ? 1.5f : -1.5f;
@@ -171,7 +230,7 @@ public class NonbinaryPuzzleScript : MonoBehaviour
         {
             resetButton.GetComponent<MeshRenderer>().material.color = Color.Lerp(white, black, flipProgress);
             resetButton.GetComponentInChildren<TextMesh>().color = Color.Lerp(black, white, flipProgress);
-            flipProgress += modifier * 1.5f * Time.deltaTime;
+            flipProgress += modifier * speed * Time.deltaTime;
             yield return null;
         }
         if (moduleSolved)
@@ -179,16 +238,87 @@ public class NonbinaryPuzzleScript : MonoBehaviour
     }
 
 #pragma warning disable 414
-    private readonly string TwitchHelpMessage = "!{0} A1 [toggle a square] | !{0} row 4 011001 [change an entire row] | !{0} col C 101001 [change an entire column] | !{0} solve 100101001011010110110100101001011010 [give a full solution] | !{0} reset";
+    private readonly string TwitchHelpMessage = "[!{0} A4 B3 F5] toggles those cells. [!{0} A4 Y B3 K] sets those cells to those colors. [!{0} row 4 YWPKYW] sets that row from left to right. [!{0} col D YWPKYW] sets that column from top to bottom. [!{0} solve YWPK...] to enter that whole grid. [!{0} reset] presses the reset button. [!{0} colorblind] toggles colorblind mode.";
 #pragma warning restore 414
 
-    IEnumerator ProcessTwitchCommand(string input)
+    IEnumerator ProcessTwitchCommand(string command)
     {
-        yield return null;
+        string[] coords = Enumerable.Range(0, 36).Select(x => "" + "ABCDEF"[x % 6] + "123456"[x / 6]).ToArray(); //This is dumb.
+        string[] letters = { "Y", "W", "P", "K" };
+        command = command.Trim().ToUpperInvariant();
+        List<string> parameters = command.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries).ToList();
+        if (parameters.All(x => coords.Contains(x)))
+        {
+            yield return null;
+            foreach (string coord in parameters)
+            {
+                buttons[Array.IndexOf(coords, coord)].OnInteract();
+                yield return new WaitForSeconds(0.1f);
+            }
+        }
+        else if (parameters.Where((_, pos) => pos % 2 == 0).All(x => coords.Contains(x)) && //If every odd position is a coordinate
+                parameters.Where((_, pos) => pos % 2 == 1).All(x => letters.Contains(x)) && //And every odd position is a color
+                parameters.Count % 2 == 0) //And there's an even number of terms
+        {
+            yield return null;
+            for (int i = 0; i < parameters.Count; i += 2)
+            {
+                int buttonIx = Array.IndexOf(coords, parameters[i]);
+                while (displayedGrid[buttonIx] != "YWPK".IndexOf(parameters[i + 1][0]) && !givens.Contains(buttonIx)) //Ignore the command if the chosen cell is given.
+                {
+                    buttons[buttonIx].OnInteract();
+                    yield return new WaitForSeconds(0.1f);
+                }
+            }
+        }
+        else if (Regex.IsMatch(command, @"^(ROW\s+[1-6])|(COL(UMN)?\s+[A-F])\s+[YWPK]{6}$"))
+        {
+            int rcIx = "ABCDEF123456".IndexOf(parameters[1][0]) % 6;
+            int[] buttonVals = parameters.Last().Select(x => "YWPK".IndexOf(x)).ToArray();
+            int[] buttonPlaces = parameters.First() == "ROW" ?
+                  Enumerable.Range(0, 6).Select(x => 6 * rcIx + x).ToArray() :
+                  Enumerable.Range(0, 6).Select(x => 6 * x + rcIx).ToArray();
+            yield return null;
+            for (int i = 0; i < 6; i++)
+            {
+                while (displayedGrid[buttonPlaces[i]] != buttonVals[i] && !givens.Contains(buttonPlaces[i]))
+                {
+                    buttons[buttonPlaces[i]].OnInteract();
+                    yield return new WaitForSeconds(0.1f);
+                }
+            }
+        }
+        else if (Regex.IsMatch(command, @"^SOLVE\s+[YWPK]{36}$"))
+        {
+            yield return null;
+            for (int i = 0; i < 36; i++)
+            {
+                while (displayedGrid[i] != "YWPK".IndexOf(parameters.Last()[i]) && !givens.Contains(i))
+                {
+                    buttons[i].OnInteract();
+                    yield return new WaitForSeconds(0.075f);
+                }
+            }
+        }
+        else if (command == "RESET")
+        {
+            yield return null;
+            resetButton.OnInteract();
+        }
+        else if(new string[] { "COLORBLIND", "COLOURBLIND", "CB", "COLOR-BLIND", "COLOUR-BLIND" }.Contains(command))
+        {
+            yield return null;
+            ToggleCB();
+        }
     }
 
     IEnumerator TwitchHandleForcedSolve()
     {
-        yield return null;
+        for (int i = 0; i < 36; i++)
+            while (displayedGrid[i] != solution[i])
+            {
+                buttons[i].OnInteract();
+                yield return new WaitForSeconds(0.075f);
+            }
     }
 }

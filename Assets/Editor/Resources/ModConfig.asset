@@ -14,7 +14,9 @@ MonoBehaviour:
   id: nonbinaryPuzzle
   title: Nonbinary Puzzle
   author: Danny7007
-  description: 
+  description: "If you don't defuse the bomb your pronouns'll be was/were.\n\nModule
+    by Danny7007 and Timwi\nmoduleID: nonbinaryPuzzle\nManual can be found at ktane.timwi.de\n\nHappy
+    Pride Month \u2764\uFE0F"
   version: 1.0
   outputFolder: build
-  previewImage: {fileID: 0}
+  previewImage: {fileID: 2800000, guid: 825d69e599040bd48930fa8a64ce4df0, type: 3}

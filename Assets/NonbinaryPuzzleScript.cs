@@ -70,6 +70,9 @@ public class NonbinaryPuzzleScript : MonoBehaviour
             return recurse(board).Take(2).Count() == 1;
         }).ToArray();
 
+        ypCounter.color = UnityEngine.Random.Range(0, 2) == 0 ? "FFFBBC".Color() : "EBCBEE".Color();
+        wkCounter.color = UnityEngine.Random.Range(0, 2) == 0 ? Color.white : "ADADAD".Color();
+
         DisplayGrid();
         DoLogging();
     }
@@ -184,8 +187,6 @@ public class NonbinaryPuzzleScript : MonoBehaviour
         {
             moduleSolved = true;
             GetComponent<KMBombModule>().HandlePass();
-            if (cbON)
-                ToggleCB();
             resetButton.GetComponentInChildren<TextMesh>().text = "CORRECT!";
         }
     }
@@ -333,7 +334,7 @@ public class NonbinaryPuzzleScript : MonoBehaviour
             yield return null;
             resetButton.OnInteract();
         }
-        else if(new string[] { "COLORBLIND", "COLOURBLIND", "CB", "COLOR-BLIND", "COLOUR-BLIND" }.Contains(command))
+        else if(command.EqualsAny("COLORBLIND", "COLOURBLIND", "CB", "COLOR-BLIND", "COLOUR-BLIND"))
         {
             yield return null;
             ToggleCB();

@@ -283,7 +283,7 @@ public class NonbinaryPuzzleScript : MonoBehaviour
                 }
             }
         }
-        else if (Regex.IsMatch(command, @"^(ROW\s+[1-6])|(COL(UMN)?\s+[A-F])\s+[YWPK]{6}$"))
+        else if (Regex.IsMatch(command, @"^(ROW\s+[1-6]|COL(UMN)?\s+[A-F])\s+[YWPK]{6}$"))
         {
             int rcIx = "ABCDEF123456".IndexOf(parameters[1][0]) % 6;
             int[] buttonVals = parameters.Last().Select(x => "YWPK".IndexOf(x)).ToArray();

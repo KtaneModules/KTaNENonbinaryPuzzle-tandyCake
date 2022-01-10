@@ -8,6 +8,9 @@ using System.Text.RegularExpressions;
 
 public class NonbinaryPuzzleScript : MonoBehaviour
 {
+    const int GRID_WIDTH = 6, GRID_HEIGHT = 6, COLOR_COUNT = 4;
+    const string LETTER_ABBRS = "YWPK"; //YWPK
+
     public KMBombInfo Bomb;
     public KMAudio Audio;
     public KMColorblindMode Colorblind;
@@ -29,7 +32,7 @@ public class NonbinaryPuzzleScript : MonoBehaviour
     private Color black = new Color(0.211f, 0.211f, 0.211f);
     private Color white = new Color(1, 1, 1);
 
-    int?[] displayedGrid = new int?[36];
+    int?[] displayedGrid = new int?[GRID_WIDTH * GRID_HEIGHT];
     int[] givens;
     int[] solution;
 
@@ -60,31 +63,35 @@ public class NonbinaryPuzzleScript : MonoBehaviour
 
     private void Start()
     {
-        solution = recurse(new int?[36]).First();
+        solution = recurse(new int?[GRID_WIDTH * GRID_HEIGHT]).First();
 
-        givens = Ut.ReduceRequiredSet(Enumerable.Range(0, 36).ToArray().Shuffle(), test: state =>
+        givens = Ut.ReduceRequiredSet(Enumerable.Range(0, GRID_WIDTH * GRID_HEIGHT).ToArray().Shuffle(), test: state =>
         {
-            var board = new int?[36];
+            var board = new int?[GRID_WIDTH * GRID_HEIGHT];
             foreach (var cell in state.SetToTest)
                 board[cell] = solution[cell];
             return recurse(board).Take(2).Count() == 1;
         }).ToArray();
+        FillGivens();
+        DoLogging();
+
+        return;
 
         ypCounter.color = UnityEngine.Random.Range(0, 2) == 0 ? "FFFBBC".Color() : "EBCBEE".Color();
         wkCounter.color = UnityEngine.Random.Range(0, 2) == 0 ? Color.white : "ADADAD".Color();
 
+
         DisplayGrid();
-        DoLogging();
     }
     
 
     void DoLogging()
     {
         Debug.LogFormat("[Nonbinary Puzzle #{0}] The displayed grid is as follows:", moduleId);
-        LogGrid(displayedGrid.Select(x => x ?? -1).ToArray(), 6, 6, ".YWPK", 1);
+        LogGrid(displayedGrid.Select(x => x ?? -1).ToArray(), GRID_HEIGHT, GRID_WIDTH, "." + LETTER_ABBRS, 1);
         Debug.LogFormat("[Nonbinary Puzzle #{0}] ", moduleId);
         Debug.LogFormat("[Nonbinary Puzzle #{0}] The solution is as follows:", moduleId);
-        LogGrid(solution, 6, 6, "YWPK", 0);
+        LogGrid(solution, GRID_HEIGHT, GRID_WIDTH, LETTER_ABBRS, 0);
     }
 
     //Puzzle generation code by Timwi.
@@ -99,15 +106,15 @@ public class NonbinaryPuzzleScript : MonoBehaviour
 
         // Find an unfilled square that has the fewest possibilities
         var bestCell = -1;
-        var fewestPossibilities = 5;
+        var fewestPossibilities = COLOR_COUNT + 1;
         int x, y;
-        for (var cell = 0; cell < 36; cell++)
+        for (var cell = 0; cell < GRID_WIDTH * GRID_HEIGHT; cell++)
         {
             if (board[cell] != null)
                 continue;
-            x = cell % 6;
-            y = cell / 6;
-            var possibilities = Enumerable.Range(0, 4).Count(color => (x == 0 || board[cell - 1] != color) && (x == 5 || board[cell + 1] != color) && (y == 0 || board[cell - 6] != color) && (y == 5 || board[cell + 6] != color));
+            x = cell % GRID_WIDTH;
+            y = cell / GRID_WIDTH;
+            var possibilities = Enumerable.Range(0, COLOR_COUNT).Count(color => (x == 0 || board[cell - 1] != color) && (x == GRID_WIDTH - 1 || board[cell + 1] != color) && (y == 0 || board[cell - GRID_WIDTH] != color) && (y == GRID_HEIGHT - 1 || board[cell + GRID_WIDTH] != color));
             if (possibilities < fewestPossibilities)
             {
                 bestCell = cell;
@@ -118,31 +125,31 @@ public class NonbinaryPuzzleScript : MonoBehaviour
         }
 
         shortcut:
-        x = bestCell % 6;
-        y = bestCell / 6;
+        x = bestCell % GRID_WIDTH;
+        y = bestCell / GRID_WIDTH;
         var parityCounts = Enumerable.Range(0, 2).Select(parity => board.Count(cl => cl != null && cl.Value % 2 == parity)).ToArray();
-        var offset = UnityEngine.Random.Range(0, 4);
-        for (var colorIter = 0; colorIter < 4; colorIter++)
+        var offset = UnityEngine.Random.Range(0, COLOR_COUNT);
+        for (var colorIter = 0; colorIter < COLOR_COUNT; colorIter++)
         {
-            var color = (colorIter + offset) % 4;
+            var color = (colorIter + offset) % COLOR_COUNT;
 
             // Make sure not to place the same color next to itself
-            if (!((x == 0 || board[bestCell - 1] != color) && (x == 5 || board[bestCell + 1] != color) && (y == 0 || board[bestCell - 6] != color) && (y == 5 || board[bestCell + 6] != color)))
+            if (!((x == 0 || board[bestCell - 1] != color) && (x == GRID_WIDTH - 1 || board[bestCell + 1] != color) && (y == 0 || board[bestCell - GRID_WIDTH] != color) && (y == GRID_HEIGHT - 1 || board[bestCell + GRID_WIDTH] != color)))
                 continue;
             // Make sure not to place more than 18 of each parity
-            if (parityCounts[color % 2] >= 18)
+            if (parityCounts[color % 2] >= GRID_WIDTH * GRID_HEIGHT / 2)
                 continue;
 
             board[bestCell] = color;
 
             // Make sure that placing this color hasn’t made it impossible to place the rest of the colors in the same ROW
-            var numMissingColors = Enumerable.Range(0, 4).Count(clr => !Enumerable.Range(0, 6).Any(xx => board[xx + 6 * y] == clr));
-            if (numMissingColors > Enumerable.Range(0, 6).Count(xx => board[xx + 6 * y] == null))
+            var numMissingColors = Enumerable.Range(0, COLOR_COUNT).Count(clr => !Enumerable.Range(0, GRID_WIDTH).Any(xx => board[xx + GRID_WIDTH * y] == clr));
+            if (numMissingColors > Enumerable.Range(0, GRID_WIDTH).Count(xx => board[xx + GRID_WIDTH * y] == null))
                 continue;
 
             // Make sure that placing this color hasn’t made it impossible to place the rest of the colors in the same COLUMN
-            numMissingColors = Enumerable.Range(0, 4).Count(clr => !Enumerable.Range(0, 6).Any(yy => board[x + 6 * yy] == clr));
-            if (numMissingColors > Enumerable.Range(0, 6).Count(yy => board[x + 6 * yy] == null))
+            numMissingColors = Enumerable.Range(0, COLOR_COUNT).Count(clr => !Enumerable.Range(0, GRID_HEIGHT).Any(yy => board[x + GRID_WIDTH * yy] == clr));
+            if (numMissingColors > Enumerable.Range(0, GRID_HEIGHT).Count(yy => board[x + GRID_WIDTH * yy] == null))
                 continue;
 
             // All checks passed: try this color
@@ -152,13 +159,18 @@ public class NonbinaryPuzzleScript : MonoBehaviour
         board[bestCell] = null;
     }
 
-    void DisplayGrid()
+    void FillGivens()
     {
-        for (int i = 0; i < 36; i++)
+        for (int i = 0; i < GRID_WIDTH * GRID_HEIGHT; i++)
             displayedGrid[i] = null;
         foreach (var given in givens)
             displayedGrid[given] = solution[given];
-        for (int i = 0; i < 36; i++)
+    }
+
+    void DisplayGrid()
+    {
+
+        for (int i = 0; i < GRID_WIDTH * GRID_HEIGHT; i++)
         {
             buttons[i].GetComponent<MeshRenderer>().sharedMaterial = displayedGrid[i] == null ? gray : materials[displayedGrid[i].Value];
             DisplayCB(i);
@@ -177,13 +189,13 @@ public class NonbinaryPuzzleScript : MonoBehaviour
             displayedGrid[pos] = 0;
         else
             displayedGrid[pos]++;
-        if (displayedGrid[pos] > 3)
+        if (displayedGrid[pos] > COLOR_COUNT - 1)
             displayedGrid[pos] = null;
 
         buttons[pos].GetComponent<MeshRenderer>().sharedMaterial = displayedGrid[pos] == null ? gray : materials[displayedGrid[pos].Value];
         SetDisplays();
         DisplayCB(pos);
-        if (Enumerable.Range(0, 36).All(ix => displayedGrid[ix] == solution[ix]))
+        if (Enumerable.Range(0, GRID_WIDTH * GRID_HEIGHT).All(ix => displayedGrid[ix] == solution[ix]))
         {
             moduleSolved = true;
             GetComponent<KMBombModule>().HandlePass();
@@ -208,7 +220,7 @@ public class NonbinaryPuzzleScript : MonoBehaviour
     void ToggleCB()
     {
         cbON = !cbON;
-        for (int i = 0; i < 36; i++)
+        for (int i = 0; i < GRID_WIDTH * GRID_HEIGHT; i++)
             DisplayCB(i);
     }
     void DisplayCB(int pos)
